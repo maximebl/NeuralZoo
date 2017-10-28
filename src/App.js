@@ -1,16 +1,21 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
-import HomePage from './Pages/Home/HomePage';
+import {HomePage} from "./Pages/Home/HomePage";
+import {Provider} from "react-redux";
+import {store} from "./redux/store";
 
 class App extends Component {
      render() {
         return (
-            <HomePage/>
+            <HomePage />
         );
     }
 }
 
 ReactDOM.render(
-    <App/>,
+    <Provider store={store}>
+        <App/>
+    </Provider>,
     document.getElementById('root')
 );
+
