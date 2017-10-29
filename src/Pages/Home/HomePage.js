@@ -1,10 +1,11 @@
-import {compose, withProps} from 'recompose';
+import {compose, withHandlers, branch, renderComponent} from 'recompose';
 import React from 'react';
 import {TextField, Typography, withStyles} from 'material-ui';
 import Card, {CardActions, CardContent, CardMedia} from 'material-ui/Card';
 import Button from 'material-ui/Button';
 import Fuse from 'fuse.js';
 import {connect} from "react-redux";
+import {showSearchResults} from "../../redux/reducers/searchReducer";
 
 const styles = theme => ({
     card: {
@@ -16,7 +17,6 @@ const styles = theme => ({
 });
 
 const ResultsCardBase = (props) => {
-    debugger;
     const {classes} = props;
     return (
         <div>
@@ -49,17 +49,18 @@ const ResultsCardBase = (props) => {
 };
 
 const ResultsCardExt = compose(
-    withStyles(styles)
+    withStyles(styles),
 );
 
 const ResultsCard = ResultsCardExt(ResultsCardBase);
 
-const onChangeHandler = ({target}) => {
+const onSearchHandler = ({showSearchResults}, {target}) => {
     const result = fuse.search(target.value);
-    debugger;
+    showSearchResults(result);
 };
 
-const HomePageBase = () => {
+const SearchFieldBase = (props) => {
+    const {searchResults} = props;
     return(
         <div>
             <TextField
@@ -73,20 +74,56 @@ const HomePageBase = () => {
                 helperText="Full width!"
                 fullWidth
                 margin="normal"
-                onChange={onChangeHandler}
+                onChange={props.onSearchHandler}
             />
+        </div>
+    )
+};
+export const SearchFieldEnhancements = compose(
+    connect(
+        null,{showSearchResults}
+    ),
+    withHandlers({
+        onSearchHandler: props => event => {
+            onSearchHandler(props, event)
+        }
+    })
+);
 
-            <ResultsCard/>
+export const SearchField = SearchFieldEnhancements(SearchFieldBase);
+
+export const HomePageBase = (props) => {
+    return(
+        <div>
+            <SearchField/>
+            <FoundItems/>
+        </div>
+    )
+};
+export const FoundItemsBase = () => {
+    return(
+        <div>
+sup
         </div>
     )
 };
 
+let bleh = () => <div>BBBBBBBBB</div>;
+
+const ResultsIfFound = resultsFound => branch(resultsFound,
+    renderComponent(<ResultsCard/>),
+    renderComponent(bleh)
+);
+
+export const FoundItemsEnhance = compose(
+    connect((state)=>({searchResults: state.searchResults})),
+    ResultsIfFound((props)=>props.searchResults !== undefined)
+);
+
+export const FoundItems = FoundItemsEnhance(FoundItemsBase);
+
 export const HomePageEnhancements = compose(
-    connect(
-        (state) => ({searchResults: state.searchResults})
-    ),
-    withStyles(styles),
-    withProps({joe:42})
+    connect((state)=>({searchResults: state.searchResults}))
 );
 
 export const HomePage = HomePageEnhancements(HomePageBase);
