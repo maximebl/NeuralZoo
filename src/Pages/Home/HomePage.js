@@ -1,11 +1,13 @@
-import {compose, withHandlers, branch, renderComponent} from 'recompose';
+import {compose, withHandlers, branch, renderComponent, renderNothing} from 'recompose';
 import React from 'react';
 import {TextField, Typography, withStyles} from 'material-ui';
 import Card, {CardActions, CardContent, CardMedia} from 'material-ui/Card';
 import Button from 'material-ui/Button';
 import Fuse from 'fuse.js';
 import {connect} from "react-redux";
-import {showSearchResults} from "../../redux/reducers/searchReducer";
+import {showSearchResults, setUserIsSearching} from "../../redux/reducers/searchReducer";
+import {map} from 'ramda';
+import {FileInput} from "../../FileInput/FileInput";
 
 const styles = theme => ({
     card: {
@@ -28,7 +30,7 @@ const ResultsCardBase = (props) => {
                 />
                 <CardContent>
                     <Typography type="headline" component="h2">
-                        Lizard
+                        {props.title}
                     </Typography>
                     <Typography component="p">
                         Lizards are a widespread group of squamate reptiles, with over 6,000 species, ranging
@@ -42,6 +44,7 @@ const ResultsCardBase = (props) => {
                     <Button dense color="primary">
                         Learn More
                     </Button>
+                    <FileInput/>
                 </CardActions>
             </Card>
         </div>
@@ -54,34 +57,56 @@ const ResultsCardExt = compose(
 
 const ResultsCard = ResultsCardExt(ResultsCardBase);
 
-const onSearchHandler = ({showSearchResults}, {target}) => {
+const onSearchHandler = ({showSearchResults, setUserIsSearching}, {target}) => {
+    // TODO: make this functionnal
     const result = fuse.search(target.value);
     showSearchResults(result);
+    if (target.value !== "") {
+        setUserIsSearching(true);
+    }
+    else {
+        setUserIsSearching(false);
+    }
 };
 
-const SearchFieldBase = (props) => {
-    const {searchResults} = props;
+const formatFoundItems = (resultCount, isSearching) => {
+    // TODO: make this functionnal
+    if (!isSearching){
+        return 'Search for AI stuff here';
+    }
+    if (isSearching && resultCount === 1){
+        return `${resultCount} item found!`;
+    }
+    if (isSearching && resultCount > 0){
+        return `${resultCount} items found!`;
+    }
+    if (isSearching && resultCount === 0){
+        return 'No items were found';
+    }
+
+};
+
+const SearchFieldBase = ({resultCount, onSearchHandler, isSearching}) => {
     return(
         <div>
             <TextField
                 autoFocus={true}
                 id="full-width"
-                label="Label"
-                InputLabelProps={{
-                    shrink: true,
-                }}
-                placeholder="Placeholder"
-                helperText="Full width!"
+                label={formatFoundItems(resultCount, isSearching)}
                 fullWidth
                 margin="normal"
-                onChange={props.onSearchHandler}
+                onChange={onSearchHandler}
             />
         </div>
     )
 };
+
 export const SearchFieldEnhancements = compose(
-    connect(
-        null,{showSearchResults}
+    connect((state)=>({
+            resultCount: state.searchReducer.foundItems.length,
+            isSearching: state.searchReducer.isSearching
+        }),
+        {showSearchResults, setUserIsSearching}
     ),
     withHandlers({
         onSearchHandler: props => event => {
@@ -92,38 +117,25 @@ export const SearchFieldEnhancements = compose(
 
 export const SearchField = SearchFieldEnhancements(SearchFieldBase);
 
-export const HomePageBase = (props) => {
-    return(
-        <div>
-            <SearchField/>
-            <FoundItems/>
-        </div>
-    )
-};
-export const FoundItemsBase = () => {
-    return(
-        <div>
-sup
-        </div>
-    )
-};
-
-let bleh = () => <div>BBBBBBBBB</div>;
+export const HomePageBase = (props) => (
+    <div>
+        <SearchField/>
+        <FoundItems/>
+    </div>
+);
 
 const ResultsIfFound = resultsFound => branch(resultsFound,
-    renderComponent(<ResultsCard/>),
-    renderComponent(bleh)
+    renderComponent(({searchResults}) => map((result) => (<ResultsCard title={result.title}/>), searchResults)),
+    renderNothing
 );
 
-export const FoundItemsEnhance = compose(
-    connect((state)=>({searchResults: state.searchResults})),
-    ResultsIfFound((props)=>props.searchResults !== undefined)
-);
-
-export const FoundItems = FoundItemsEnhance(FoundItemsBase);
+export const FoundItems = compose(
+    connect((state) => ({searchResults: state.searchReducer.foundItems})),
+    ResultsIfFound((props) => props.searchResults.length !== 0)
+)();
 
 export const HomePageEnhancements = compose(
-    connect((state)=>({searchResults: state.searchResults}))
+    connect((state)=>({searchResults: state.searchReducer.foundItems}))
 );
 
 export const HomePage = HomePageEnhancements(HomePageBase);
