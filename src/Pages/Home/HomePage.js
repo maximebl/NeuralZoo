@@ -6,12 +6,13 @@ import Button from 'material-ui/Button';
 import Fuse from 'fuse.js';
 import {connect} from "react-redux";
 import {showSearchResults, setUserIsSearching} from "../../redux/reducers/searchReducer";
-import {map} from 'ramda';
+import {ifElse, gt, always, map, not, equals, and, cond} from 'ramda';
 import {FileInput} from "../../FileInput/FileInput";
+import store from '../../redux/store';
 
 const styles = theme => ({
     card: {
-        maxWidth: 345,
+        maxWidth: 500,
     },
     media: {
         height: 200,
@@ -57,60 +58,59 @@ const ResultsCardExt = compose(
 
 const ResultsCard = ResultsCardExt(ResultsCardBase);
 
-const onSearchHandler = ({showSearchResults, setUserIsSearching}, {target}) => {
-    // TODO: make this functionnal
-    const result = fuse.search(target.value);
-    showSearchResults(result);
-    if (target.value !== "") {
-        setUserIsSearching(true);
-    }
-    else {
-        setUserIsSearching(false);
-    }
+const setSearchingIfUserIsEnteringText = (val) => ifElse(
+    () => not(equals(val, "")),
+    () => store.dispatch(setUserIsSearching(true)),
+    () => store.dispatch(setUserIsSearching(false))
+)();
+
+const displaySearchResults = (target) => store.dispatch(showSearchResults(fuse.search(target)));
+
+const onSearchHandler = ({target}) => {
+    displaySearchResults(target.value);
+    setSearchingIfUserIsEnteringText(target.value);
 };
 
 const formatFoundItems = (resultCount, isSearching) => {
-    // TODO: make this functionnal
-    if (!isSearching){
-        return 'Search for AI stuff here';
-    }
-    if (isSearching && resultCount === 1){
-        return `${resultCount} item found!`;
-    }
-    if (isSearching && resultCount > 0){
-        return `${resultCount} items found!`;
-    }
-    if (isSearching && resultCount === 0){
-        return 'No items were found';
-    }
+    const notSearching = () => not(isSearching);
+    const oneItemFound = equals(resultCount, 1);
+    const moreThanOneItemFound = gt(resultCount, 1);
+    const nothingFound = equals(resultCount, 0);
 
+    const oneItemFoundWhileSearching = () => and(isSearching, oneItemFound);
+    const multipleItemsFoundWhileSearching = () => and(isSearching, moreThanOneItemFound);
+    const noItemsFoundWhileSearching = () => and(isSearching, nothingFound);
+
+    return cond([
+        [notSearching, always('Search for AI stuff here.')],
+        [oneItemFoundWhileSearching, always(`1 item found!`)],
+        [multipleItemsFoundWhileSearching, always(`${resultCount} items found!`)],
+        [noItemsFoundWhileSearching, always('No items were found.')]
+    ])();
 };
 
-const SearchFieldBase = ({resultCount, onSearchHandler, isSearching}) => {
-    return(
-        <div>
-            <TextField
-                autoFocus={true}
-                id="full-width"
-                label={formatFoundItems(resultCount, isSearching)}
-                fullWidth
-                margin="normal"
-                onChange={onSearchHandler}
-            />
-        </div>
-    )
-};
+const SearchFieldBase = ({resultCount, onSearchHandler, isSearching}) => (
+    <div>
+        <TextField
+            autoFocus={true}
+            id="full-width"
+            label={formatFoundItems(resultCount, isSearching)}
+            fullWidth
+            margin="normal"
+            onChange={onSearchHandler}
+        />
+    </div>
+);
 
 export const SearchFieldEnhancements = compose(
     connect((state)=>({
             resultCount: state.searchReducer.foundItems.length,
             isSearching: state.searchReducer.isSearching
-        }),
-        {showSearchResults, setUserIsSearching}
+        })
     ),
     withHandlers({
         onSearchHandler: props => event => {
-            onSearchHandler(props, event)
+            onSearchHandler(event)
         }
     })
 );
