@@ -3,7 +3,7 @@ import {withStyles} from 'material-ui';
 import Chip from 'material-ui/Chip';
 import Input, { InputLabel } from 'material-ui/Input';
 import {compose, withHandlers} from 'recompose';
-import {and, equals, both, not, isNil, split, last} from 'ramda';
+import {isEmpty, prop, and, always, ifElse, not, isNil, split, last} from 'ramda';
 import {connect} from "react-redux";
 import {updateFileInputLabel} from "../redux/reducers/searchReducer";
 import store from '../redux/store';
@@ -52,24 +52,38 @@ export const StyledFileInput = compose(
 export const FileInput = StyledFileInput(BaseFileInput);
 
 const onChangeHandler = (event) => {
-    debugger;
     let currentFilePath = getInputFilePathText();
     store.dispatch(updateFileInputLabel(currentFilePath));
 };
 
 const getInputFilePathText = () => {
     let fileName = document.getElementById("name-simple");
-    debugger;
 
-    if (and(not(isNil(fileName)), not(equals(fileName.value, "")))) {
-        let abc = split("\\", fileName.value);
-        let test = last(abc);
-        debugger;
-        return test;
-    }
-    else {
-        return 'TRY'
-    }
+    //TODO curry out fileName
+    const notEmptyString = compose(
+        not,
+        isEmpty,
+        prop('value')
+    );
+
+    const notNilOrEmptyString = compose(
+        and(notEmptyString(fileName)),
+        not,
+        isNil
+    );
+
+    const splitPath = compose(
+        last,
+        split("\\"),
+        prop('value')
+    );
+
+    const pathElseTRY = (file) => ifElse(
+        always(notNilOrEmptyString(file)),
+        always(splitPath(file)),
+        always('TRY')
+    );
+    return pathElseTRY(fileName)();
 };
 
 const handleRequestDelete = (e) => {
