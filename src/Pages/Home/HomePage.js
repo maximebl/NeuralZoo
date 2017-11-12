@@ -45,7 +45,7 @@ const ResultsCardBase = (props) => {
                     <Button dense color="primary">
                         Learn More
                     </Button>
-                    <FileInput/>
+                    <FileInput />
                 </CardActions>
             </Card>
         </div>
@@ -124,10 +124,12 @@ export const HomePageBase = (props) => (
     </div>
 );
 
-const ResultsIfFound = resultsFound => branch(resultsFound,
-    renderComponent(({searchResults}) => map((result) => (<ResultsCard title={result.title}/>), searchResults)),
-    renderNothing
-);
+//TODO: Add state to result cards in Redux
+const ResultsIfFound = resultsFound =>
+    branch(resultsFound,
+        renderComponent(({searchResults}) => map((result) => (<ResultsCard title={result.title}/>), searchResults)),
+        renderNothing
+    );
 
 export const FoundItems = compose(
     connect((state) => ({searchResults: state.searchReducer.foundItems})),

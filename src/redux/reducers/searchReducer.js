@@ -10,8 +10,7 @@ export const updateFileInputLabel = (val) => ({type: UPDATE_FILE_INPUT_LABEL, pa
 
 const initialState = {
     foundItems: [],
-    isSearching: false,
-    inputLabel: 'TRY'
+    isSearching: false
 };
 
 export default (state = initialState, action) => {

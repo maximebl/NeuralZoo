@@ -2,11 +2,12 @@ import React from 'react';
 import {withStyles} from 'material-ui';
 import Chip from 'material-ui/Chip';
 import Input, { InputLabel } from 'material-ui/Input';
-import {compose, withHandlers} from 'recompose';
-import {isEmpty, prop, and, always, ifElse, not, isNil, split, last} from 'ramda';
+import {compose, withHandlers, lifecycle, withState} from 'recompose';
+import {and, both, isEmpty, always, ifElse, not, isNil, split, last} from 'ramda';
 import {connect} from "react-redux";
 import {updateFileInputLabel} from "../redux/reducers/searchReducer";
 import store from '../redux/store';
+import uuid from 'uuid/v1';
 
 const styles = theme => ({
     hideInputButton: {
@@ -14,23 +15,25 @@ const styles = theme => ({
     }
 });
 
+const PLACEHOLDER = 'TRY';
+
 const BaseFileInput = (props) => {
-    const {classes, inputLabel, onChangeHandler} = props;
+    const {classes, onChangeHandler, id, inputLabel} = props;
     return (
         <div>
-            <InputLabel htmlFor="name-simple">
+            <InputLabel htmlFor={id}>
                 <Chip
                     type="file"
                     id="fileInput"
-                    label={inputLabel}
+                    label={setInputLabel(id, inputLabel)}
                     containerElement='label'
-                    htmlFor="name-simple"
-                    onRequestDelete={handleRequestDelete}>
+                    htmlFor={id}
+                    onRequestDelete={(e) => handleRequestDelete(id, e)}>
                 </Chip>
             </InputLabel>
             <Input
                 className={classes.hideInputButton}
-                id="name-simple"
+                id={id}
                 type="file"
                 onChange={onChangeHandler}
             />
@@ -41,52 +44,60 @@ export const StyledFileInput = compose(
     connect((state) => ({inputLabel: state.searchReducer.inputLabel}),
         {updateFileInputLabel}
     ),
-    withHandlers({
-        onChangeHandler: props => event => {
-            onChangeHandler(event)
-        }
-    }),
-    withStyles(styles)
+    withHandlers({onChangeHandler: props => () => onChangeHandler()}),
+    withStyles(styles),
+    withState('id', 'updateId', undefined),
+    lifecycle({
+        componentWillMount: function() {
+            this.props.updateId(uuid());
+        },
+    })
 );
 
 export const FileInput = StyledFileInput(BaseFileInput);
 
-const onChangeHandler = (event) => {
-    let currentFilePath = getInputFilePathText();
-    store.dispatch(updateFileInputLabel(currentFilePath));
+const setInputLabel = (currentId, updateSource) => {
+    //TODO: FP this part
+    if(currentId !== undefined && updateSource !== undefined) {
+        let fileName = document.getElementById(currentId);
+        if(fileName !== null) {
+            return getFilePathOrPlaceholder(fileName.value, PLACEHOLDER);
+        }
+    }
 };
 
-const getInputFilePathText = () => {
-    let fileName = document.getElementById("name-simple");
+// force rendering
+const onChangeHandler = () => store.dispatch(updateFileInputLabel({'rand':Math.random()}));
 
-    //TODO curry out fileName
-    const notEmptyString = compose(
-        not,
-        isEmpty,
-        prop('value')
-    );
+const notEmptyValue = compose(
+    not,
+    isEmpty
+);
 
-    const notNilOrEmptyString = compose(
-        and(notEmptyString(fileName)),
-        not,
-        isNil
-    );
+const notNil = compose(
+    not,
+    isNil
+);
 
-    const splitPath = compose(
-        last,
-        split("\\"),
-        prop('value')
-    );
+const notNilOrEmptyString = both(
+    notEmptyValue,
+    notNil
+);
 
-    const pathElseTRY = (file) => ifElse(
-        always(notNilOrEmptyString(file)),
-        always(splitPath(file)),
-        always('TRY')
-    );
-    return pathElseTRY(fileName)();
-};
+const splitPath = compose(
+    last,
+    split("\\")
+);
 
-const handleRequestDelete = (e) => {
+
+const getFilePathOrPlaceholder = (fileName, placeholder) =>
+    ifElse(
+        always(notNilOrEmptyString(fileName)),
+        always(splitPath(fileName)),
+        always(placeholder)
+    )();
+
+const handleRequestDelete = (itemToDeleteId, e) => {
     e.preventDefault();
-    store.dispatch(updateFileInputLabel('TRY'));
+    store.dispatch(updateFileInputLabel({'rand':Math.random(), 'deleteTarget':itemToDeleteId}))
 };
