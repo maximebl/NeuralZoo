@@ -3,9 +3,9 @@ import {withStyles} from 'material-ui';
 import Chip from 'material-ui/Chip';
 import Input, { InputLabel } from 'material-ui/Input';
 import {compose, withHandlers, lifecycle, withState} from 'recompose';
-import {and, both, isEmpty, always, ifElse, not, isNil, split, last} from 'ramda';
+import {construct, both, isEmpty, always, ifElse, not, isNil, split, last} from 'ramda';
 import {connect} from "react-redux";
-import {updateFileInputLabel} from "../redux/reducers/searchReducer";
+import {updateFileInputLabel, addInput} from "../redux/reducers/searchReducer";
 import store from '../redux/store';
 import uuid from 'uuid/v1';
 
@@ -18,14 +18,14 @@ const styles = theme => ({
 const PLACEHOLDER = 'TRY';
 
 const BaseFileInput = (props) => {
-    const {classes, onChangeHandler, id, inputLabel} = props;
+    const {classes, onChangeHandler, id, fileInput} = props;
     return (
         <div>
             <InputLabel htmlFor={id}>
                 <Chip
                     type="file"
                     id="fileInput"
-                    label={setInputLabel(id, inputLabel)}
+                    label={fileInput.label}
                     containerElement='label'
                     htmlFor={id}
                     onRequestDelete={(e) => handleRequestDelete(id, e)}>
@@ -40,9 +40,18 @@ const BaseFileInput = (props) => {
         </div>)
 };
 
+function fileInput(label) {
+    this.label = label;
+}
+
+const FileInputConstructor = construct(fileInput);
+
 export const StyledFileInput = compose(
-    connect((state) => ({inputLabel: state.searchReducer.inputLabel}),
-        {updateFileInputLabel}
+    connect((state) => ({
+            inputLabel: state.searchReducer.inputLabel,
+            fileInput: state.searchReducer.fileInputs
+    }),
+        {updateFileInputLabel, addInput}
     ),
     withHandlers({onChangeHandler: props => () => onChangeHandler()}),
     withStyles(styles),
@@ -51,6 +60,14 @@ export const StyledFileInput = compose(
         componentWillMount: function() {
             this.props.updateId(uuid());
         },
+        componentDidMount: function() {
+            debugger;
+            let fileName = document.getElementById(this.props.id);
+            let label = getFilePathOrPlaceholder(fileName.value, PLACEHOLDER);
+
+            const FileInput = FileInputConstructor(label);
+            this.props.addInput(FileInput);
+        }
     })
 );
 

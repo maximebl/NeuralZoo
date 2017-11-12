@@ -1,12 +1,12 @@
-import {compose, withHandlers, branch, renderComponent, renderNothing} from 'recompose';
+import {lifecycle, compose, withHandlers, branch, renderComponent, renderNothing} from 'recompose';
 import React from 'react';
 import {TextField, Typography, withStyles} from 'material-ui';
 import Card, {CardActions, CardContent, CardMedia} from 'material-ui/Card';
 import Button from 'material-ui/Button';
 import Fuse from 'fuse.js';
 import {connect} from "react-redux";
-import {showSearchResults, setUserIsSearching} from "../../redux/reducers/searchReducer";
-import {ifElse, gt, always, map, not, equals, and, cond} from 'ramda';
+import {addResult, showSearchResults, setUserIsSearching} from "../../redux/reducers/searchReducer";
+import {construct, ifElse, gt, always, map, not, equals, and, cond} from 'ramda';
 import {FileInput} from "../../FileInput/FileInput";
 import store from '../../redux/store';
 
@@ -52,8 +52,20 @@ const ResultsCardBase = (props) => {
     );
 };
 
+function resultCard(title) {
+    this.title = title;
+}
+
+const ResultCardConstructor = construct(resultCard);
+
 const ResultsCardExt = compose(
-    withStyles(styles),
+    lifecycle({
+        componentDidMount: function() {
+            const ResultCard = ResultCardConstructor(this.props.title);
+            this.props.addResult(ResultCard);
+        }
+    }),
+    withStyles(styles)
 );
 
 const ResultsCard = ResultsCardExt(ResultsCardBase);
@@ -105,8 +117,10 @@ const SearchFieldBase = ({resultCount, onSearchHandler, isSearching}) => (
 export const SearchFieldEnhancements = compose(
     connect((state)=>({
             resultCount: state.searchReducer.foundItems.length,
-            isSearching: state.searchReducer.isSearching
-        })
+            isSearching: state.searchReducer.isSearching,
+            resultCards: state.searchReducer.resultCards
+        }),
+        {addResult}
     ),
     withHandlers({
         onSearchHandler: props => event => {
