@@ -9,6 +9,7 @@ import {addResult, showSearchResults, setUserIsSearching} from "../../redux/redu
 import {construct, ifElse, gt, always, map, not, equals, and, cond} from 'ramda';
 import {FileInput} from "../../FileInput/FileInput";
 import store from '../../redux/store';
+import uuid from 'uuid/v1';
 
 const styles = theme => ({
     card: {
@@ -20,7 +21,7 @@ const styles = theme => ({
 });
 
 const ResultsCardBase = (props) => {
-    const {classes} = props;
+    const {classes, inputLabel, id} = props;
     return (
         <div>
             <Card className={classes.card}>
@@ -45,26 +46,21 @@ const ResultsCardBase = (props) => {
                     <Button dense color="primary">
                         Learn More
                     </Button>
-                    <FileInput />
+                    <FileInput id={id} label={inputLabel}/>
                 </CardActions>
             </Card>
         </div>
     );
 };
 
-function resultCard(title) {
+function resultCard(title, inputLabel) {
     this.title = title;
+    this.inputLabel = inputLabel;
 }
 
 const ResultCardConstructor = construct(resultCard);
 
 const ResultsCardExt = compose(
-    lifecycle({
-        componentDidMount: function() {
-            const ResultCard = ResultCardConstructor(this.props.title);
-            this.props.addResult(ResultCard);
-        }
-    }),
     withStyles(styles)
 );
 
@@ -76,7 +72,21 @@ const setSearchingIfUserIsEnteringText = (val) => ifElse(
     () => store.dispatch(setUserIsSearching(false))
 )();
 
-const displaySearchResults = (target) => store.dispatch(showSearchResults(fuse.search(target)));
+const generateIds = (items) => {
+    for (let i = 0; i < items.length; i += 1) {
+            items[i].id = uuid();
+    }
+};
+
+const displaySearchResults = (target) => {
+    let foundItems = fuse.search(target);
+    let newItems = map((item)=> ResultCardConstructor(
+        item.title,
+        'TRY'
+    ), foundItems);
+    generateIds(newItems);
+    return store.dispatch(showSearchResults(newItems));
+};
 
 const onSearchHandler = ({target}) => {
     displaySearchResults(target.value);
@@ -141,7 +151,7 @@ export const HomePageBase = (props) => (
 //TODO: Add state to result cards in Redux
 const ResultsIfFound = resultsFound =>
     branch(resultsFound,
-        renderComponent(({searchResults}) => map((result) => (<ResultsCard title={result.title}/>), searchResults)),
+        renderComponent(({searchResults}) => map((result) => (<ResultsCard key={result.id} id={result.id} title={result.title} inputLabel={result.inputLabel}/>), searchResults)),
         renderNothing
     );
 

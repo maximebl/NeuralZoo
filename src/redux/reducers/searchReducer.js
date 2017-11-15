@@ -1,4 +1,19 @@
-import {assoc} from 'ramda';
+import {evolve, assoc, ifElse, identity, compose, map, propEq} from 'ramda';
+
+const IdIs = (IdNumber) => propEq('id', IdNumber);
+
+const updateWithValueIfIdMatch = (ItemID, newValue, property) => ifElse(
+    IdIs(ItemID),
+    assoc(property, newValue),
+    identity
+);
+
+const updateItemsWith = compose(
+    map,
+    updateWithValueIfIdMatch
+);
+
+const updatePropertyValueWhereIdMatch = (ItemID, newValue, property) => ({foundItems: updateItemsWith(ItemID, newValue, property)});
 
 const SHOW_SEARCH_RESULTS = 'SHOW_SEARCH_RESULTS';
 const SET_USER_SEARCHING = 'SET_USER_SEARCHING';
@@ -19,22 +34,23 @@ const initialState = {
     fileInputs: []
 };
 
-export default (state = initialState, action) => {
-    switch (action.type) {
+export default (state = initialState, {payload, type}) => {
+    switch (type) {
         case SHOW_SEARCH_RESULTS:
-            return assoc('foundItems', action.payload, state);
+            return assoc('foundItems', payload, state);
 
         case SET_USER_SEARCHING:
-            return assoc('isSearching', action.payload, state);
+            return assoc('isSearching', payload, state);
 
         case UPDATE_FILE_INPUT_LABEL:
-            return assoc('inputLabel', action.payload, state);
+            debugger;
+            return evolve(updatePropertyValueWhereIdMatch(payload.id, payload.newLabel, 'inputLabel'), state);
 
         case ADD_RESULT:
-            return assoc('resultCards', action.payload, state);
+            return assoc('resultCards', payload, state);
 
         case ADD_INPUT:
-            return assoc('fileInputs', action.payload, state);
+            return assoc('fileInputs', payload, state);
 
         default:
             return state

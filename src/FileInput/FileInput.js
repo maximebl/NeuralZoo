@@ -2,12 +2,11 @@ import React from 'react';
 import {withStyles} from 'material-ui';
 import Chip from 'material-ui/Chip';
 import Input, { InputLabel } from 'material-ui/Input';
-import {compose, withHandlers, lifecycle, withState} from 'recompose';
-import {construct, both, isEmpty, always, ifElse, not, isNil, split, last} from 'ramda';
+import {compose, withHandlers} from 'recompose';
+import {both, isEmpty, always, ifElse, not, isNil, split, last} from 'ramda';
 import {connect} from "react-redux";
 import {updateFileInputLabel, addInput} from "../redux/reducers/searchReducer";
 import store from '../redux/store';
-import uuid from 'uuid/v1';
 
 const styles = theme => ({
     hideInputButton: {
@@ -18,14 +17,14 @@ const styles = theme => ({
 const PLACEHOLDER = 'TRY';
 
 const BaseFileInput = (props) => {
-    const {classes, onChangeHandler, id, fileInput} = props;
+    const {classes, id, label} = props;
     return (
         <div>
             <InputLabel htmlFor={id}>
                 <Chip
                     type="file"
                     id="fileInput"
-                    label={fileInput.label}
+                    label={label}
                     containerElement='label'
                     htmlFor={id}
                     onRequestDelete={(e) => handleRequestDelete(id, e)}>
@@ -35,16 +34,10 @@ const BaseFileInput = (props) => {
                 className={classes.hideInputButton}
                 id={id}
                 type="file"
-                onChange={onChangeHandler}
+                onChange={(e) => onChangeHandler(id, e)}
             />
         </div>)
 };
-
-function fileInput(label) {
-    this.label = label;
-}
-
-const FileInputConstructor = construct(fileInput);
 
 export const StyledFileInput = compose(
     connect((state) => ({
@@ -53,29 +46,15 @@ export const StyledFileInput = compose(
     }),
         {updateFileInputLabel, addInput}
     ),
-    withHandlers({onChangeHandler: props => () => onChangeHandler()}),
-    withStyles(styles),
-    withState('id', 'updateId', undefined),
-    lifecycle({
-        componentWillMount: function() {
-            this.props.updateId(uuid());
-        },
-        componentDidMount: function() {
-            debugger;
-            let fileName = document.getElementById(this.props.id);
-            let label = getFilePathOrPlaceholder(fileName.value, PLACEHOLDER);
-
-            const FileInput = FileInputConstructor(label);
-            this.props.addInput(FileInput);
-        }
-    })
+    withHandlers({onChangeHandler: props => () => onChangeHandler}),
+    withStyles(styles)
 );
 
 export const FileInput = StyledFileInput(BaseFileInput);
 
-const setInputLabel = (currentId, updateSource) => {
+const setInputLabel = (currentId) => {
     //TODO: FP this part
-    if(currentId !== undefined && updateSource !== undefined) {
+    if(currentId !== undefined) {
         let fileName = document.getElementById(currentId);
         if(fileName !== null) {
             return getFilePathOrPlaceholder(fileName.value, PLACEHOLDER);
@@ -84,7 +63,11 @@ const setInputLabel = (currentId, updateSource) => {
 };
 
 // force rendering
-const onChangeHandler = () => store.dispatch(updateFileInputLabel({'rand':Math.random()}));
+const onChangeHandler = (id) => {
+    let fileName = document.getElementById(id);
+    let newLabel = getFilePathOrPlaceholder(fileName.value, PLACEHOLDER);
+    return store.dispatch(updateFileInputLabel({'newLabel':newLabel, 'id':id}));
+};
 
 const notEmptyValue = compose(
     not,
@@ -116,5 +99,5 @@ const getFilePathOrPlaceholder = (fileName, placeholder) =>
 
 const handleRequestDelete = (itemToDeleteId, e) => {
     e.preventDefault();
-    store.dispatch(updateFileInputLabel({'rand':Math.random(), 'deleteTarget':itemToDeleteId}))
+    store.dispatch(updateFileInputLabel({'newLabel': PLACEHOLDER, 'id':itemToDeleteId}))
 };
