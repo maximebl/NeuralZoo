@@ -5,7 +5,7 @@ import Card, {CardActions, CardContent, CardMedia} from 'material-ui/Card';
 import Button from 'material-ui/Button';
 import Fuse from 'fuse.js';
 import {connect} from "react-redux";
-import {addResult, showSearchResults, setUserIsSearching} from "../../redux/reducers/searchReducer";
+import {showSearchResults, setUserIsSearching} from "../../redux/reducers/actions";
 import {construct, ifElse, gt, always, map, not, equals, and, cond} from 'ramda';
 import {FileInput} from "../../FileInput/FileInput";
 import store from '../../redux/store';
@@ -129,8 +129,7 @@ export const SearchFieldEnhancements = compose(
             resultCount: state.searchReducer.foundItems.length,
             isSearching: state.searchReducer.isSearching,
             resultCards: state.searchReducer.resultCards
-        }),
-        {addResult}
+        })
     ),
     withHandlers({
         onSearchHandler: props => event => {
