@@ -1,4 +1,4 @@
-import {lifecycle, compose, withHandlers, branch, renderComponent, renderNothing} from 'recompose';
+import {compose, withHandlers, branch, renderComponent, renderNothing} from 'recompose';
 import React from 'react';
 import {TextField, Typography, withStyles} from 'material-ui';
 import Card, {CardActions, CardContent, CardMedia} from 'material-ui/Card';
@@ -10,6 +10,7 @@ import {construct, ifElse, gt, always, map, not, equals, and, cond} from 'ramda'
 import {FileInput} from "../../FileInput/FileInput";
 import store from '../../redux/store';
 import uuid from 'uuid/v1';
+import {PLACEHOLDER_TRY} from "../../utils/constants";
 
 const styles = theme => ({
     card: {
@@ -74,7 +75,7 @@ const setSearchingIfUserIsEnteringText = (val) => ifElse(
 
 const generateIds = (items) => {
     for (let i = 0; i < items.length; i += 1) {
-            items[i].id = uuid();
+        items[i].id = uuid();
     }
 };
 
@@ -82,7 +83,7 @@ const displaySearchResults = (target) => {
     let foundItems = fuse.search(target);
     let newItems = map((item)=> ResultCardConstructor(
         item.title,
-        'TRY'
+        PLACEHOLDER_TRY
     ), foundItems);
     generateIds(newItems);
     return store.dispatch(showSearchResults(newItems));
@@ -147,16 +148,22 @@ export const HomePageBase = (props) => (
     </div>
 );
 
-//TODO: Add state to result cards in Redux
-const ResultsIfFound = resultsFound =>
+const ResultsCards = ({searchResults}) => mapResultsToCards(searchResults);
+
+const mapResultsToCards = map(({id, title, inputLabel}) =>
+    (<ResultsCard key={id} id={id} title={title} inputLabel={inputLabel}/>));
+
+const renderIfResultsFound = resultsFound =>
     branch(resultsFound,
-        renderComponent(({searchResults}) => map((result) => (<ResultsCard key={result.id} id={result.id} title={result.title} inputLabel={result.inputLabel}/>), searchResults)),
+        renderComponent(ResultsCards),
         renderNothing
     );
 
+const checkIfResultsFound = ({searchResults}) => gt(searchResults.length, 0);
+
 export const FoundItems = compose(
     connect((state) => ({searchResults: state.searchReducer.foundItems})),
-    ResultsIfFound((props) => props.searchResults.length !== 0)
+    renderIfResultsFound(checkIfResultsFound)
 )();
 
 export const HomePageEnhancements = compose(

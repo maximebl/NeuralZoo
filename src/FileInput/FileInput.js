@@ -2,20 +2,19 @@ import React from 'react';
 import {withStyles} from 'material-ui';
 import Chip from 'material-ui/Chip';
 import Input, { InputLabel } from 'material-ui/Input';
-import {compose, withHandlers} from 'recompose';
-import {always, ifElse, curry} from 'ramda';
+import {compose} from 'recompose';
+import {always, ifElse} from 'ramda';
 import {connect} from "react-redux";
 import {updateFileInputLabel} from "../redux/reducers/actions";
 import store from '../redux/store';
 import {notNilOrEmptyString, splitPath} from "../utils/generic";
+import {PLACEHOLDER_TRY} from "../utils/constants";
 
 const styles = theme => ({
     hideInputButton: {
         display: 'none',
     }
 });
-
-const PLACEHOLDER = 'TRY';
 
 const BaseFileInput = (props) => {
     const {classes, id, label} = props;
@@ -47,26 +46,24 @@ export const StyledFileInput = compose(
     }),
         {updateFileInputLabel}
     ),
-    withHandlers({onChangeHandler: props => () => onChangeHandler}),
     withStyles(styles)
 );
 
 export const FileInput = StyledFileInput(BaseFileInput);
 
 const getFilePathOrPlaceholder = (fileName, placeholder) => ifElse(
-    always(notNilOrEmptyString(fileName)),
-    always(splitPath(fileName)),
+    notNilOrEmptyString,
+    splitPath,
     always(placeholder)
-);
+)(fileName);
 
 const onChangeHandler = (id) => {
     let fileName = document.getElementById(id);
-    let newLabel = getFilePathOrPlaceholder(fileName.value)(PLACEHOLDER);
+    let newLabel = getFilePathOrPlaceholder(fileName.value, PLACEHOLDER_TRY);
     return store.dispatch(updateFileInputLabel({'newLabel': newLabel, 'id':id}));
 };
 
-
 const handleRequestDelete = (itemToDeleteId, e) => {
     e.preventDefault();
-    store.dispatch(updateFileInputLabel({'newLabel': PLACEHOLDER, 'id':itemToDeleteId}))
+    store.dispatch(updateFileInputLabel({'newLabel': PLACEHOLDER_TRY, 'id':itemToDeleteId}))
 };
