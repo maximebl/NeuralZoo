@@ -1,6 +1,6 @@
 import {evolve, assoc} from 'ramda';
-import {updatePropertyValueWhereIdMatch} from "./utils";
-import {SET_USER_SEARCHING, SHOW_SEARCH_RESULTS, UPDATE_FILE_INPUT_LABEL} from "./actions";
+import {updateAllWithValueIfIdMatch} from "./utils";
+import {SET_USER_SEARCHING, SHOW_SEARCH_RESULTS, UPDATE_FILE_INPUT_LABEL} from "../../utils/constants";
 
 const initialState = {
     foundItems: [],
@@ -18,8 +18,7 @@ export default (state = initialState, {payload, type}) => {
             return assoc('isSearching', payload, state);
 
         case UPDATE_FILE_INPUT_LABEL:
-            return evolve(updatePropertyValueWhereIdMatch(payload.id, payload.newLabel, 'inputLabel'), state);
-
+            return evolve({foundItems: updateAllWithValueIfIdMatch(payload.id, payload.newLabel, 'inputLabel')}, state);
         default:
             return state
     }

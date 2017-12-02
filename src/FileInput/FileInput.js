@@ -8,15 +8,13 @@ import {connect} from "react-redux";
 import {updateFileInputLabel} from "../redux/reducers/actions";
 import store from '../redux/store';
 import {notNilOrEmptyString, splitPath} from "../utils/generic";
+import {PLACEHOLDER_TRY} from "../utils/constants";
 
 const styles = theme => ({
     hideInputButton: {
         display: 'none',
     }
 });
-
-
-const PLACEHOLDER = 'TRY';
 
 const BaseFileInput = (props) => {
     const {classes, id, label} = props;
@@ -38,8 +36,7 @@ const BaseFileInput = (props) => {
                 type="file"
                 onChange={(e) => onChangeHandler(id, e)}
             />
-        </div>
-    )
+        </div>)
 };
 
 export const StyledFileInput = compose(
@@ -55,27 +52,27 @@ export const StyledFileInput = compose(
 export const FileInput = StyledFileInput(BaseFileInput);
 
 const getFilePathOrPlaceholder = (fileName, placeholder) => ifElse(
-    always(notNilOrEmptyString(fileName)),
-    always(splitPath(fileName)),
+    notNilOrEmptyString,
+    splitPath,
     always(placeholder)
-);
+)(fileName);
 
 const onChangeHandler = (id) => {
     let fileName = document.getElementById(id);
+    let newLabel = getFilePathOrPlaceholder(fileName.value, PLACEHOLDER_TRY);
     debugger;
 
     const file = fileName.files[0];
     let formData = new FormData();
     formData.append("image", file);
     upload(formData);
-    let newLabel = getFilePathOrPlaceholder(fileName.value)(PLACEHOLDER);
     return store.dispatch(updateFileInputLabel({'newLabel': newLabel, 'id':id}));
 };
 
 
 const handleRequestDelete = (itemToDeleteId, e) => {
     e.preventDefault();
-    store.dispatch(updateFileInputLabel({'newLabel': PLACEHOLDER, 'id':itemToDeleteId}))
+    store.dispatch(updateFileInputLabel({'newLabel': PLACEHOLDER_TRY, 'id':itemToDeleteId}))
 };
 
 const upload = (formData) => {

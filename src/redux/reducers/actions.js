@@ -1,6 +1,4 @@
-export const SHOW_SEARCH_RESULTS = 'SHOW_SEARCH_RESULTS';
-export const SET_USER_SEARCHING = 'SET_USER_SEARCHING';
-export const UPDATE_FILE_INPUT_LABEL = 'UPDATE_FILE_INPUT_LABEL';
+import {SET_USER_SEARCHING, SHOW_SEARCH_RESULTS, UPDATE_FILE_INPUT_LABEL} from "../../utils/constants";
 
 export const showSearchResults = (val) => ({type: SHOW_SEARCH_RESULTS, payload: val});
 export const setUserIsSearching = (val) => ({type: SET_USER_SEARCHING, payload: val});
