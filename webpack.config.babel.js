@@ -1,6 +1,6 @@
-import path from 'path';
+var path = require('path');
 
-export default {
+module.exports = {
     devtool: 'inline-source-map',
     target: 'web',
     entry: './src/index.js',

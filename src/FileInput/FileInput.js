@@ -2,8 +2,8 @@ import React from 'react';
 import {withStyles} from 'material-ui';
 import Chip from 'material-ui/Chip';
 import Input, { InputLabel } from 'material-ui/Input';
-import {compose, withHandlers} from 'recompose';
-import {always, ifElse, curry} from 'ramda';
+import {compose} from 'recompose';
+import {always, ifElse} from 'ramda';
 import {connect} from "react-redux";
 import {updateFileInputLabel} from "../redux/reducers/actions";
 import store from '../redux/store';
@@ -14,6 +14,7 @@ const styles = theme => ({
         display: 'none',
     }
 });
+
 
 const PLACEHOLDER = 'TRY';
 
@@ -37,7 +38,8 @@ const BaseFileInput = (props) => {
                 type="file"
                 onChange={(e) => onChangeHandler(id, e)}
             />
-        </div>)
+        </div>
+    )
 };
 
 export const StyledFileInput = compose(
@@ -47,7 +49,6 @@ export const StyledFileInput = compose(
     }),
         {updateFileInputLabel}
     ),
-    withHandlers({onChangeHandler: props => () => onChangeHandler}),
     withStyles(styles)
 );
 
@@ -61,6 +62,12 @@ const getFilePathOrPlaceholder = (fileName, placeholder) => ifElse(
 
 const onChangeHandler = (id) => {
     let fileName = document.getElementById(id);
+    debugger;
+
+    const file = fileName.files[0];
+    let formData = new FormData();
+    formData.append("image", file);
+    upload(formData);
     let newLabel = getFilePathOrPlaceholder(fileName.value)(PLACEHOLDER);
     return store.dispatch(updateFileInputLabel({'newLabel': newLabel, 'id':id}));
 };
@@ -70,3 +77,34 @@ const handleRequestDelete = (itemToDeleteId, e) => {
     e.preventDefault();
     store.dispatch(updateFileInputLabel({'newLabel': PLACEHOLDER, 'id':itemToDeleteId}))
 };
+
+const upload = (formData) => {
+    fetch('http://localhost:4000/imagenet/resnet18/classify', {
+        method: 'POST',
+        // mode: 'no-cors',
+        headers: {
+            "Content-Type": "image/jpeg",
+            "Accept": "application/json",
+            "Accept-Encoding":"gzip, deflate, br",
+            'Origin': 'http://localhost:4000',
+            "Accept-Language":"en-GB,en-US;q=0.9,en;q=0.8,fr;q=0.7"
+        },
+        body: formData
+    }).then(
+        response => {
+            debugger;
+            return JSON.stringify(response)
+        }
+    ).then(
+        success => {
+            debugger;
+            return console.log(success)
+        }
+).catch(
+        error => {
+            debugger;
+            return console.log(error)
+        }
+);
+};
+
