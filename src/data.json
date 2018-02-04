@@ -1,0 +1,46 @@
+{
+  "models": [
+    {
+      "title": "Image Classification",
+      "description": "Model for image recognition and classification. Insert an image to get a prediction and a probability of accuracy.",
+      "inputType": "image",
+      "endpoint": "/imagenet/resnet18/classify"
+    },
+    {
+      "title": "Super Resolution",
+      "description": "Insert a low resolution image to get a higher resolution version of that same image. Warning, needs more training to generalize. Takes small (~72px) images only.",
+      "inputType": "image",
+      "endpoint": "/imagenet/superresolutionCL/transform"
+    },
+    {
+      "title": "Neural Style Transfer",
+      "description": "Modify an image to be udnie styled",
+      "inputType": "image",
+      "endpoint": "/mscoco/styletransfer_udnie/transform"
+    },
+    {
+      "title": "Neural Style Transfer",
+      "description": "Modify an image to be starry night styled",
+      "inputType": "image",
+      "endpoint": "/mscoco/styletransfer_starry/transform"
+    },
+    {
+      "title": "Depth Map Prediction from sparse labels",
+      "description": "Predict a depth map from an image. Warning, only works on indoor scenes.",
+      "inputType": "image",
+      "endpoint": "/nyudepth/depthinthewild/transform"
+    },
+    {
+      "title": "Depth Map Prediction from sparse labels",
+      "description": "Predict a depth map from an image. Warning, only works on indoor scenes.",
+      "inputType": "image",
+      "endpoint": "/nyudepth/depthinthewild/transform_raw"
+    },
+    {
+      "title": "Sentence Classification",
+      "description": "Predicts the nature of a sentence.",
+      "inputType": "text",
+      "endpoint": "/imdb/textcnn/classify"
+    }
+  ]
+}

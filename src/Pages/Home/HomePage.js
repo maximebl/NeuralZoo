@@ -7,37 +7,52 @@ import Fuse from 'fuse.js';
 import {connect} from "react-redux";
 import {showSearchResults, setUserIsSearching} from "../../redux/reducers/actions";
 import {construct, ifElse, gt, always, map, not, equals, and, cond} from 'ramda';
+import {maybe} from 'folktale';
 import {FileInput} from "../../FileInput/FileInput";
 import store from '../../redux/store';
-import uuid from 'uuid/v1';
-import {PLACEHOLDER_TRY} from "../../utils/constants";
+import {
+    ITEMS_FOUND, NO_ITEMS_FOUND, ONE_ITEM_FOUND, PLACEHOLDER_TRY, SEARCH_HERE,
+    UNKNOWN_TITLE
+} from "../../utils/constants";
+import {generateIds, safeGet} from "../../redux/reducers/utils";
+import * as modelData from "../../data";
 
-const styles = theme => ({
+const styleObj = ({
     card: {
         maxWidth: 500,
+        paddingBottom: 10
+    },
+    bold: {
+        fontWeight: "bold"
     },
     media: {
         height: 200,
     },
 });
 
+const styles = theme => styleObj;
+
+const Bold = (props) => <span style={styleObj.bold}>{props.children}</span>;
+
 const ResultsCardBase = (props) => {
-    const {classes, inputLabel, id} = props;
+    const {title, classes, inputLabel, id, description, uploadedImage, result, endpoint} = props;
+
     return (
-        <div>
-            <Card className={classes.card}>
+        <div className={classes.card}>
+            <Card>
                 <CardMedia
                     className={classes.media}
-                    image="http://www.animalfactguide.com/wp-content/uploads/2015/09/sloth4_full.jpg"
-                    title="Contemplative Reptile"
+                    image={uploadedImage}
                 />
                 <CardContent>
                     <Typography type="headline" component="h2">
-                        {props.title}
+                        {title}
                     </Typography>
-                    <Typography component="p">
-                        Lizards are a widespread group of squamate reptiles, with over 6,000 species, ranging
-                        across all continents except Antarctica
+                    <Typography component="p" gutterBottom>
+                        {description}
+                    </Typography>
+                    <Typography type="caption" component="h2">
+                        <SearchResult result={result}/>
                     </Typography>
                 </CardContent>
                 <CardActions>
@@ -47,19 +62,31 @@ const ResultsCardBase = (props) => {
                     <Button dense color="primary">
                         Learn More
                     </Button>
-                    <FileInput id={id} label={inputLabel}/>
+                    <FileInput id={id} label={inputLabel} endpoint={endpoint}/>
                 </CardActions>
             </Card>
         </div>
     );
 };
+const Result = ({result}) => (
+    <div>
+        {'We are '}
+        <Bold>{result.probability + '%'}</Bold>
+        {' sure that this is a '}
+        <Bold>{result.prediction}</Bold>
+    </div>
+);
 
-function resultCard(title, inputLabel) {
-    this.title = title;
-    this.inputLabel = inputLabel;
-}
+const checkIfSearchResultsFound = ({result}) => gt(result.length, 0);
 
-const ResultCardConstructor = construct(resultCard);
+const SearchResultIfResultFound = branch(checkIfSearchResultsFound,
+        renderComponent(Result),
+        renderNothing
+    );
+
+const SearchResult = compose(
+  SearchResultIfResultFound
+)();
 
 const ResultsCardExt = compose(
     withStyles(styles)
@@ -73,20 +100,39 @@ const setSearchingIfUserIsEnteringText = (val) => ifElse(
     () => store.dispatch(setUserIsSearching(false))
 )();
 
-const generateIds = (items) => {
-    for (let i = 0; i < items.length; i += 1) {
-        items[i].id = uuid();
-    }
-};
+function resultCard(id, title, description, inputLabel, uploadedImage, result, endpoint) {
+    this.id = id.getOrElse("");
+    this.title = title.getOrElse(UNKNOWN_TITLE);
+    this.inputLabel = inputLabel.getOrElse(PLACEHOLDER_TRY);
+    this.description = description.getOrElse("");
+    this.uploadedImage = uploadedImage.getOrElse("");
+    this.result = result.getOrElse({"prediction": "", "probability": ""});
+    this.endpoint = endpoint.getOrElse("");
+}
 
-const displaySearchResults = (target) => {
-    let foundItems = fuse.search(target);
-    let newItems = map((item)=> ResultCardConstructor(
-        item.title,
-        PLACEHOLDER_TRY
-    ), foundItems);
-    generateIds(newItems);
-    return store.dispatch(showSearchResults(newItems));
+const ResultCardConstructor = construct(resultCard);
+
+const resultCardMapper = ({inputLabel, id, title, description, uploadedImage, result, endpoint}) => ResultCardConstructor(
+    maybe.fromNullable(id),
+    maybe.fromNullable(title),
+    maybe.fromNullable(description),
+    maybe.fromNullable(inputLabel),
+    maybe.fromNullable(uploadedImage),
+    maybe.fromNullable(result),
+    maybe.fromNullable(endpoint)
+);
+
+const toResultCardObj = map(resultCardMapper);
+
+export const processItems = compose(
+    generateIds,
+    toResultCardObj
+);
+
+export const displaySearchResults = (value) => {
+    let foundItems = fuse.search(value);
+    let processedItems = processItems(foundItems).getOrElse([]);
+    return store.dispatch(showSearchResults(processedItems));
 };
 
 const onSearchHandler = ({target}) => {
@@ -94,7 +140,7 @@ const onSearchHandler = ({target}) => {
     setSearchingIfUserIsEnteringText(target.value);
 };
 
-const formatFoundItems = (resultCount, isSearching) => {
+export const formatFoundItems = (resultCount, isSearching) => {
     const notSearching = () => not(isSearching);
     const oneItemFound = equals(resultCount, 1);
     const moreThanOneItemFound = gt(resultCount, 1);
@@ -105,10 +151,10 @@ const formatFoundItems = (resultCount, isSearching) => {
     const noItemsFoundWhileSearching = () => and(isSearching, nothingFound);
 
     return cond([
-        [notSearching, always('Search for AI stuff here.')],
-        [oneItemFoundWhileSearching, always(`1 item found!`)],
-        [multipleItemsFoundWhileSearching, always(`${resultCount} items found!`)],
-        [noItemsFoundWhileSearching, always('No items were found.')]
+        [notSearching, always(SEARCH_HERE)],
+        [oneItemFoundWhileSearching, always(ONE_ITEM_FOUND)],
+        [multipleItemsFoundWhileSearching, always(`${resultCount}${ITEMS_FOUND}`)],
+        [noItemsFoundWhileSearching, always(NO_ITEMS_FOUND)]
     ])();
 };
 
@@ -126,7 +172,7 @@ const SearchFieldBase = ({resultCount, onSearchHandler, isSearching}) => (
 );
 
 export const SearchFieldEnhancements = compose(
-    connect((state)=>({
+    connect((state) => ({
             resultCount: state.searchReducer.foundItems.length,
             isSearching: state.searchReducer.isSearching,
             resultCards: state.searchReducer.resultCards
@@ -141,17 +187,27 @@ export const SearchFieldEnhancements = compose(
 
 export const SearchField = SearchFieldEnhancements(SearchFieldBase);
 
-export const HomePageBase = (props) => (
+export const HomePageBase = () => (
     <div>
         <SearchField/>
         <FoundItems/>
     </div>
 );
 
-const ResultsCards = ({searchResults}) => mapResultsToCards(searchResults);
+const ResultsCards = ({searchResults}) => mapResultsToCards(toResultCardObj(searchResults));
 
-const mapResultsToCards = map(({id, title, inputLabel}) =>
-    (<ResultsCard key={id} id={id} title={title} inputLabel={inputLabel}/>));
+const mapResultsToCards = map(({id, title, inputLabel, description, uploadedImage, endpoint, result}) =>
+    (<ResultsCard
+        key={id}
+        id={id}
+        title={title}
+        inputLabel={inputLabel}
+        description={description}
+        uploadedImage={uploadedImage}
+        endpoint={endpoint}
+        result={result}
+    />)
+);
 
 const renderIfResultsFound = resultsFound =>
     branch(resultsFound,
@@ -167,174 +223,10 @@ export const FoundItems = compose(
 )();
 
 export const HomePageEnhancements = compose(
-    connect((state)=>({searchResults: state.searchReducer.foundItems}))
+    connect((state) => ({searchResults: state.searchReducer.foundItems}))
 );
 
 export const HomePage = HomePageEnhancements(HomePageBase);
-
-const list =  [
-    {
-        title: "Old Man's War",
-        author: {
-            firstName: "John",
-            lastName: "Scalzi"
-        }
-    },
-    {
-        title: "The Lock Artist",
-        author: {
-            firstName: "Steve",
-            lastName: "Hamilton"
-        }
-    },
-    {
-        title: "HTML5",
-        author: {
-            firstName: "Remy",
-            lastName: "Sharp"
-        }
-    },
-    {
-        title: "Right Ho Jeeves",
-        author: {
-            firstName: "P.D",
-            lastName: "Woodhouse"
-        }
-    },
-    {
-        title: "The Code of the Wooster",
-        author: {
-            firstName: "P.D",
-            lastName: "Woodhouse"
-        }
-    },
-    {
-        title: "Thank You Jeeves",
-        author: {
-            firstName: "P.D",
-            lastName: "Woodhouse"
-        }
-    },
-    {
-        title: "The DaVinci Code",
-        author: {
-            firstName: "Dan",
-            lastName: "Brown"
-        }
-    },
-    {
-        title: "Angels & Demons",
-        author: {
-            firstName: "Dan",
-            lastName: "Brown"
-        }
-    },
-    {
-        title: "The Silmarillion",
-        author: {
-            firstName: "J.R.R",
-            lastName: "Tolkien"
-        }
-    },
-    {
-        title: "Syrup",
-        author: {
-            firstName: "Max",
-            lastName: "Barry"
-        }
-    },
-    {
-        title: "The Lost Symbol",
-        author: {
-            firstName: "Dan",
-            lastName: "Brown"
-        }
-    },
-    {
-        title: "The Book of Lies",
-        author: {
-            firstName: "Brad",
-            lastName: "Meltzer"
-        }
-    },
-    {
-        title: "Lamb",
-        author: {
-            firstName: "Christopher",
-            lastName: "Moore"
-        }
-    },
-    {
-        title: "Fool",
-        author: {
-            firstName: "Christopher",
-            lastName: "Moore"
-        }
-    },
-    {
-        title: "Incompetence",
-        author: {
-            firstName: "Rob",
-            lastName: "Grant"
-        }
-    },
-    {
-        title: "Fat",
-        author: {
-            firstName: "Rob",
-            lastName: "Grant"
-        }
-    },
-    {
-        title: "Colony",
-        author: {
-            firstName: "Rob",
-            lastName: "Grant"
-        }
-    },
-    {
-        title: "Backwards, Red Dwarf",
-        author: {
-            firstName: "Rob",
-            lastName: "Grant"
-        }
-    },
-    {
-        title: "The Grand Design",
-        author: {
-            firstName: "Stephen",
-            lastName: "Hawking"
-        }
-    },
-    {
-        title: "The Book of Samson",
-        author: {
-            firstName: "David",
-            lastName: "Maine"
-        }
-    },
-    {
-        title: "The Preservationist",
-        author: {
-            firstName: "David",
-            lastName: "Maine"
-        }
-    },
-    {
-        title: "Fallen",
-        author: {
-            firstName: "David",
-            lastName: "Maine"
-        }
-    },
-    {
-        title: "Monster 1959",
-        author: {
-            firstName: "David",
-            lastName: "Maine"
-        }
-    }
-];
 
 const options = {
     shouldSort: true,
@@ -345,8 +237,9 @@ const options = {
     minMatchCharLength: 1,
     keys: [
         "title",
-        "author.firstName"
+        "description"
     ]
 };
 
-const fuse = new Fuse(list, options);
+const fuse = new Fuse(modelData.models, options);
+

@@ -13,17 +13,21 @@ var wallabyPostprocessor = wallabyWebpack(webpackConfig);
 module.exports = function (wallaby) {
     return {
         files: [
-            {pattern: 'src/**/*.js', load: false}
+            {pattern: 'src/**/*.js', load: false}, {pattern: 'src/**/*.spec.js', ignore:true}
         ],
 
         tests: [
-            {pattern:'spec/**/*Spec.js', load: false}
+            {pattern:'src/**/*.spec.js', load: false}
         ],
 
         compilers: {
             '**/*.js': wallaby.compilers.babel()
         },
-
+        env: {
+            kind: 'chrome',
+            type: 'browser',
+            // runner: 'chrome',
+        },
         postprocessor: wallabyPostprocessor,
 
         setup: function () {

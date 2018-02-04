@@ -19,6 +19,7 @@
   "homepage": "https://github.com/A-Jacobson/neuralzoo#readme",
   "dependencies": {
     "express": "4.16.2",
+    "folktale": "^2.0.1",
     "fuse.js": "3.2.0",
     "jasmine": "^2.8.0",
     "material-ui": "1.0.0-beta.18",
